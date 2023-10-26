@@ -1,0 +1,16 @@
+[package]
+name = "rocket_eplore"
+version = "0.1.0"
+edition = "2021"
+build = "src/build.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+egui = "0.23.0"
+eframe = "0.23.0"
+egui_extras = { version = "0.23.0", features = ["image"]}
+image = { version = "0.24.0", features = ["png"]}
+chrono = "0.4.31"
+
+[build-dependencies]
+cc = "1.0.83"
