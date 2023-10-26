@@ -1,8 +1,6 @@
 use std::path::{PathBuf};
-use std::{fs, slice, thread};
-use std::ffi::{c_char, c_int, c_uint, c_ulong, c_ulonglong, c_ushort, c_void, CStr, CString, OsStr, OsString};
-use std::os::windows::ffi::{OsStrExt, OsStringExt};
-use std::ptr::slice_from_raw_parts;
+use std::{fs, thread};
+use std::ffi::{c_char, c_ulong, CString};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 

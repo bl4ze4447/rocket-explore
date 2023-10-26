@@ -2,12 +2,19 @@ use std::fs;
 use std::fs::File;
 use eframe::{ egui };
 use egui::{Context , TextBuffer};
+use crate::copy_action::CopyAction;
+use crate::create_action::CreateAction;
+use crate::delete_action::DeleteAction;
+use crate::error_modal::ErrorModal;
 
-use crate::filemanipulation::{ErrorModal, MoveAction, CopyAction, CreateAction, RenameAction, DeleteAction, OpenAction, SelectAction, SelectionResult};
 use crate::pathinfo::PathInfo;
 use crate::radiostate::RadioState;
 use crate::fileopener::{open_file};
-use crate::language_strings::{LangKeys, LangString};
+use crate::language_strings::{LangKey, LangString};
+use crate::move_action::MoveAction;
+use crate::open_action::OpenAction;
+use crate::rename_action::RenameAction;
+use crate::select_action::SelectionResult;
 
 pub fn err_win(error_modal: &mut ErrorModal, ctx: &Context) {
     if error_modal.show {
@@ -27,20 +34,20 @@ pub fn err_win(error_modal: &mut ErrorModal, ctx: &Context) {
 
 pub fn create_win(create_action: &mut CreateAction, radio_state: &mut RadioState, lang_string: &LangString, ctx: &Context) {
     if create_action.show_window {
-        egui::Window::new(lang_string.get(&LangKeys::CreateNew)).show(ctx, |ui| {
+        egui::Window::new(lang_string.get(LangKey::CreateNew)).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut create_action.new_file_name).hint_text(lang_string.get(&LangKeys::NewName)));
+                ui.add(egui::TextEdit::singleline(&mut create_action.new_file_name).hint_text(lang_string.get(LangKey::NewName)));
                 if radio_state.create_win.file {
-                    ui.add(egui::TextEdit::singleline(&mut create_action.extension).hint_text(lang_string.get(&LangKeys::ExtensionOptional)));
+                    ui.add(egui::TextEdit::singleline(&mut create_action.extension).hint_text(lang_string.get(LangKey::ExtensionOptional)));
                 }
 
                 ui.horizontal(|ui| {
                     ui.centered_and_justified(|ui| {
-                        if ui.radio(radio_state.create_win.file, lang_string.get(&LangKeys::File)).clicked() {
+                        if ui.radio(radio_state.create_win.file, lang_string.get(LangKey::File)).clicked() {
                             radio_state.create_win.folder = false;
                             radio_state.create_win.file = true;
                         }
-                        if ui.radio(radio_state.create_win.folder, lang_string.get(&LangKeys::Folder)).clicked() {
+                        if ui.radio(radio_state.create_win.folder, lang_string.get(LangKey::Folder)).clicked() {
                             radio_state.create_win.folder = true;
                             radio_state.create_win.file = false;
                         }
@@ -51,7 +58,7 @@ pub fn create_win(create_action: &mut CreateAction, radio_state: &mut RadioState
 
                 ui.horizontal(|ui| {
                     ui.centered_and_justified(|ui| {
-                        if ui.button(lang_string.get(&LangKeys::Create)).clicked() {
+                        if ui.button(lang_string.get(LangKey::Create)).clicked() {
                             let mut new_type = create_action.file.clone();
                             new_type.push(create_action.new_file_name.clone());
                             if radio_state.create_win.folder {
@@ -67,7 +74,7 @@ pub fn create_win(create_action: &mut CreateAction, radio_state: &mut RadioState
 
                             create_action.clear();
                         }
-                        if ui.button(lang_string.get(&LangKeys::Cancel)).clicked() {
+                        if ui.button(lang_string.get(LangKey::Cancel)).clicked() {
                             create_action.clear();
                         }
                     });
@@ -79,19 +86,19 @@ pub fn create_win(create_action: &mut CreateAction, radio_state: &mut RadioState
 
 pub fn rename_win(rename_action: &mut RenameAction, lang_string: &LangString, ctx: &Context) {
     if rename_action.show_window {
-        egui::Window::new(lang_string.get(&LangKeys::RenameFile)).show(ctx, |ui| {
+        egui::Window::new(lang_string.get(LangKey::RenameFile)).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.spacing_mut().item_spacing.y = 10.0;
-                ui.label(lang_string.get(&LangKeys::OldName) + rename_action.file.file_name().unwrap().to_string_lossy().as_str());
+                ui.label(lang_string.get(LangKey::OldName) + rename_action.file.file_name().unwrap().to_string_lossy().as_str());
                 ui.spacing_mut().item_spacing.y = 20.0;
-                ui.add(egui::TextEdit::singleline(&mut rename_action.name_after_rename).hint_text(lang_string.get(&LangKeys::NewName)));
+                ui.add(egui::TextEdit::singleline(&mut rename_action.name_after_rename).hint_text(lang_string.get(LangKey::NewName)));
                 ui.spacing_mut().item_spacing.y = 5.0;
 
                 ui.separator();
 
                 ui.horizontal(|ui| {
                     ui.centered_and_justified(|ui| {
-                        if ui.button(lang_string.get(&LangKeys::Rename)).clicked() {
+                        if ui.button(lang_string.get(LangKey::Rename)).clicked() {
 
                             let mut new_path = rename_action.file.clone();
                             new_path.pop();
@@ -103,7 +110,7 @@ pub fn rename_win(rename_action: &mut RenameAction, lang_string: &LangString, ct
 
                             rename_action.clear();
                         }
-                        if ui.button(lang_string.get(&LangKeys::Cancel)).clicked() {
+                        if ui.button(lang_string.get(LangKey::Cancel)).clicked() {
                             rename_action.clear();
                         }
                     })
@@ -305,17 +312,17 @@ pub fn delete_win(delete_action: &mut DeleteAction, ctx: &Context) {
     }
 }
 
-pub fn open_win(open_action: &mut OpenAction) {
+pub fn open_win(open_action: &mut OpenAction, lang_string: &LangString) {
     if open_action.open {
         match &open_action.file_list {
             SelectionResult::Single(file) => {
-                if let Err(caption) = open_file(&file) {
+                if let Err(caption) = open_file(&file, lang_string) {
                     open_action.error_modal.set(caption.to_string(), true);
                 }
             }
             SelectionResult::Multiple(files) => {
                 for file in files {
-                    if let Err(caption) = open_file(&file) {
+                    if let Err(caption) = open_file(&file, lang_string) {
                         open_action.error_modal.set(caption.to_string(), true);
                     }
                 }
@@ -329,3 +336,4 @@ pub fn open_win(open_action: &mut OpenAction) {
         open_action.clear();
     }
 }
+

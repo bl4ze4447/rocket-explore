@@ -1,8 +1,8 @@
-use egui::{Align2, Color32, FontFamily, FontId, Image, ImageSource, Response, Ui, Vec2};
+use egui::{Align2, Color32, FontFamily, FontId, Response, Ui, Vec2};
 
 pub fn file_widget(ui: &mut Ui, selected: bool, text: &str) -> Response {
     let desired_space = ui.spacing().interact_size.y * egui::vec2(1.0, 2.0);
-    let (rect, mut response) = ui.allocate_at_least(desired_space + Vec2::new(15.0 * text.len() as f32 / 1.5, 0.0), egui::Sense::click());
+    let (rect, response) = ui.allocate_at_least(desired_space + Vec2::new(15.0 * text.len() as f32 / 1.5, 0.0), egui::Sense::click());
 
     response.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, selected, "File Widget"));
 

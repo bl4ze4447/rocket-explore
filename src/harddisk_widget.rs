@@ -1,8 +1,8 @@
-use egui::{Align2, Color32, FontFamily, FontId, Image, ImageSource, Response, Ui, Vec2};
+use egui::{Align2, Color32, FontFamily, FontId, Response, Ui, Vec2};
 
 pub fn harddisk_widget(ui: &mut Ui, selected: bool, text: &str, size_free: &str, size_total: &str) -> Response {
     let desired_space = ui.spacing().interact_size.y * egui::vec2(1.0, 3.0);
-    let (rect, mut response) = ui.allocate_at_least(desired_space + Vec2::new(13.0 * (text.len() + size_free.len() + size_total.len()) as f32 , 0.0) / 1.5, egui::Sense::click());
+    let (rect, response) = ui.allocate_at_least(desired_space + Vec2::new(13.0 * (text.len() + size_free.len() + size_total.len()) as f32 , 0.0) / 1.5, egui::Sense::click());
 
     response.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, selected, "HardDisk Widget"));
 

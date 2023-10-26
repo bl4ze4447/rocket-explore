@@ -1,8 +1,7 @@
 use std::thread::available_parallelism;
-
 pub struct Search {
-    pub available_threads: Vec<u8>,
-    pub selected_thread_count: u8,
+    pub available_threads:      Vec<u8>,
+    pub selected_thread_count:  u8,
 }
 
 pub struct Settings {
@@ -24,7 +23,6 @@ impl Settings {
             available_threads.push(thread_option);
             thread_option = thread_option * 2;
         }
-
         available_threads.push(max_thread_count);
 
         Self {
