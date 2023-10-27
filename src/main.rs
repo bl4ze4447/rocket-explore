@@ -18,9 +18,10 @@ mod rename_action;
 mod select_action;
 mod actionwindow;
 
+use std::path::PathBuf;
 // egui libraries
 use eframe::{egui, HardwareAcceleration, Theme};
-use egui::{Button, Context, Id, Image, ImageSource, include_image, Label, Sense, TextBuffer, TextStyle, Ui, Vec2, WidgetText};
+use egui::{Context, CursorIcon, Id, Image, ImageSource, include_image, Label, Sense, TextBuffer, TextStyle, Ui, Vec2, WidgetText};
 use egui_extras;
 
 // Standard library
@@ -35,7 +36,7 @@ use crate::settings::Settings;
 use crate::file_widget::file_widget;
 use crate::filemanager::{ get_display_size};
 use crate::harddisk_widget::harddisk_widget;
-use crate::language_strings::{LangKey, LangString, Language};
+use crate::language_strings::{LangKey, LangString};
 use crate::select_action::{SelectAction, SelectionMode};
 
 fn main() -> eframe::Result<()> {
@@ -63,28 +64,28 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
 
-    eframe::run_native("RocketExplore", native_options, Box::new(|cc| Box::new(RocketExplore::new(cc))))
+    eframe::run_native("Rocket Explore", native_options, Box::new(|cc| Box::new(RocketExplore::new(cc))))
 }
 
 struct RocketExplore {
     path_info:      PathInfo,
-    lang_string:    LangString,
     search_info:    SearchInfo,
     file_action:    FileAction,
     radio_state:    RadioState,
     settings:       Settings,
+    lang_string:    LangString,
 }
 
 impl RocketExplore {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        let ls = LangString::new();
+        let lang_string = LangString::new();
         Self {
-            path_info:          PathInfo::new(&ls),
-            lang_string:        ls,
+            path_info:          PathInfo::new(&lang_string),
             search_info:        SearchInfo::new(),
             file_action:        FileAction::new(),
             radio_state:        RadioState::new(),
             settings:           Settings::new(),
+            lang_string,
         }
     }
 }
@@ -96,45 +97,25 @@ impl eframe::App for RocketExplore {
         let file_img = include_image!(".\\Icons\\Files\\default_file.png");
         // Check if search stopped
         self.search_info.searching = if self.search_info.rx_finished.try_recv().is_ok() { false } else { self.search_info.searching };
+        self.file_action.select_action.check();
 
 
         // LEFT PANEL
         egui::SidePanel::left(Id::new("Navigation_Panel")).resizable(true).show(ctx, |ui| {
-            ui.label("Test");
         });
 
         // TOP PANEL
         egui::TopBottomPanel::top(Id::new("Navigation_Bar")).show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.add(Button::new(WidgetText::from("<").text_style(TextStyle::Heading))).clicked() {
-                    if let Some(path) = self.path_info.previous_paths.pop() {
-                        self.path_info.next_paths.push(self.path_info.current_absolute_path.clone());
-                        self.path_info.current_absolute_path = path.clone();
-                        if !path.exists() {
-                            self.path_info.show_dir_content = false;
-                        }
+                if ui.button("Go back").clicked() {
+                    if self.path_info.get_current_path().pop() {
+                        self.path_info.update_current_path(&PathBuf::from(self.path_info.get_current_path().parent().unwrap()));
                     } else {
-                        if self.path_info.current_absolute_path.pop() == false {
-                            self.path_info.show_dir_content = false;
-                        }
+                        self.path_info.show_dir_content = false;
                     }
                 }
-                if ui.add(Button::new(WidgetText::from(">").text_style(TextStyle::Heading))).clicked() {
-                    if let Some(path) = self.path_info.next_paths.pop() {
-                        let mut copy = self.path_info.current_absolute_path.clone();
-                        if copy.pop() == false {
-                            self.path_info.show_dir_content = true;
-                        }
-                        self.path_info.current_absolute_path = path.clone();
-                        self.path_info.previous_paths.push(path);
-                    }
-                }
-
-                if ui.button("English").clicked() {
-                    self.lang_string.current_lang = Language::English;
-                }
-                if ui.button("Romana").clicked() {
-                    self.lang_string.current_lang = Language::Romanian;
+                if ui.button("Go forward").clicked() {
+                    // TODO
                 }
             });
         });
@@ -143,12 +124,12 @@ impl eframe::App for RocketExplore {
         egui::TopBottomPanel::bottom(Id::new("TODO: Find Name xD")).show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.add(Image::from(folder_img.clone()).fit_to_exact_size(Vec2::new(64.0, 64.0)));
-                if let Some(name) = &self.path_info.current_absolute_path.file_name() {
+                if let Some(name) = self.path_info.get_current_path().file_name() {
                     ui.add(Label::new(WidgetText::from(name.to_string_lossy()).text_style(TextStyle::Heading)));
                 } else if !self.path_info.show_dir_content {
                     ui.add(Label::new(WidgetText::from(self.lang_string.get(LangKey::RootPath)).text_style(TextStyle::Heading)));
                 } else {
-                    ui.add(Label::new(WidgetText::from(PathInfo::strip_win_prefix(&self.path_info.current_absolute_path.to_string_lossy())).text_style(TextStyle::Heading)));
+                    ui.add(Label::new(WidgetText::from(PathInfo::strip_win_prefix(&self.path_info.get_current_path().to_string_lossy())).text_style(TextStyle::Heading)));
                 }
             })
         });
@@ -178,24 +159,37 @@ fn central_device_content(ui: &mut Ui, path_info: &mut PathInfo) {
     path_info.search_for_devices();
 
     ui.horizontal(|ui| {
-        for device in &path_info.connected_devices {
+        for device in path_info.connected_devices.clone() {
             path_info.disk_space.recalculate(device.to_string_lossy().as_str());
             let dev = harddisk_widget(ui, false, PathInfo::strip_win_prefix(&device.to_string_lossy()).as_str(),
                                       get_display_size(path_info.disk_space.free as u64).to_string().as_str(),
                                       get_display_size(path_info.disk_space.total as u64).to_string().as_str());
+
             if dev.double_clicked() {
-                path_info.current_absolute_path = device.clone();
+                path_info.update_current_path(&device);
                 path_info.show_dir_content = true;
-                path_info.previous_paths.push(device.clone());
             }
         }
     });
 }
 fn central_directory_content(ui: &mut Ui, lang_string: &LangString, path_info: &mut PathInfo, file_action: &mut FileAction, folder_img: &ImageSource, file_img: &ImageSource) {
-    path_info.fill_directory_content();
-    egui::ScrollArea::both().show(ui, |ui| {
-        let current_directory_content = path_info.current_directory_content.clone();
-        for file in &mut path_info.current_directory_content {
+    if path_info.update_directory { // First frame we update the cursor, then perform the fill operation
+        if !path_info.cursor_set {
+            ui.ctx().set_cursor_icon(CursorIcon::Wait);
+            path_info.cursor_set = true;
+            return;
+        }
+
+        path_info.fill_directory_content();
+        ui.ctx().set_cursor_icon(CursorIcon::Default);
+    }
+
+    let total_rows = path_info.current_directory_content.len();
+    let row_height = (ui.spacing().interact_size.y * 2.0);
+    egui::ScrollArea::both().show_rows(ui, row_height, total_rows, |ui, row_range| {
+        let mut files = path_info.current_directory_content[row_range].to_vec();
+        let cur_dir_content = files.clone();
+        for file in &mut files {
             if let Some(filename) = file.file_name() {
                 ui.horizontal(|ui| {
                     if let Ok(metadata) = file.metadata() {
@@ -208,15 +202,15 @@ fn central_directory_content(ui: &mut Ui, lang_string: &LangString, path_info: &
                             let response = file_widget(ui, file_action.select_action.is_selected(file), filename.to_string_lossy().as_str());
                             response.clone().context_menu(|ui| {
                                 if !file_action.select_action.is_selected(file) {
-                                    file_action.select_action.manage_selection(file, &current_directory_content);
+                                    file_action.select_action.manage_selection(file, &cur_dir_content);
                                 }
                                 central_file_ctx_buttons(ui, &lang_string, file_action);
                             });
                             if response.double_clicked() {
                                 if metadata.is_dir() {
                                     if let Ok(new_path) = file.canonicalize() {
-                                        path_info.previous_paths.push(path_info.current_absolute_path.clone());
-                                        path_info.current_absolute_path = new_path;
+                                        path_info.update_current_path(&new_path);
+                                        return;
                                     } else {
                                         file_action.open_action.error_modal.set(lang_string.get(LangKey::CantOpenSystemDir), true);
                                     }
@@ -226,6 +220,7 @@ fn central_directory_content(ui: &mut Ui, lang_string: &LangString, path_info: &
                                     file_action.open_action.file_list = file_action.select_action.get_selection();
                                 }
                             }
+
                             if response.clicked() {
                                 response.ctx.input(|inp| {
                                     if inp.modifiers.ctrl && file_action.select_action.mode == SelectionMode::SINGLE {
@@ -240,14 +235,15 @@ fn central_directory_content(ui: &mut Ui, lang_string: &LangString, path_info: &
                                     }
                                 });
 
-                                file_action.select_action.manage_selection(file, &current_directory_content);
+                                file_action.select_action.manage_selection(file, &cur_dir_content);
                             }
+
                         });
                     }
                 });
             }
         }
-    }); // use ShowRows
+    });
 }
 
 fn central_action(ctx: &Context, file_action: &mut FileAction, radio_state: &mut RadioState, lang_string: &LangString) {
@@ -340,19 +336,19 @@ fn central_file_ctx_buttons(ui: &mut Ui, lang_string: &LangString, file_action: 
 fn central_ctx_buttons(ui: &mut Ui, lang_string: &LangString, file_action: &mut FileAction, path_info: &PathInfo) {
     if ui.button(lang_string.get(LangKey::CreateNew)).clicked() {
         file_action.create_action.show_window = true;
-        file_action.create_action.file = path_info.current_absolute_path.clone();
+        file_action.create_action.file = path_info.get_current_path();
         file_action.create_action.show_window = true;
         ui.close_menu();
     }
     if file_action.copy_action.show_window && file_action.move_action.show_window {
         ui.menu_button(lang_string.get(LangKey::PasteFrom), |ui| {
            if ui.button(lang_string.get(LangKey::Copy)).clicked() {
-               file_action.copy_action.to = path_info.current_absolute_path.clone();
+               file_action.copy_action.to = path_info.get_current_path();
                file_action.copy_action.paste = true;
                ui.close_menu();
            }
             if ui.button(lang_string.get(LangKey::Move)).clicked() {
-                file_action.move_action.to = path_info.current_absolute_path.clone();
+                file_action.move_action.to = path_info.get_current_path();
                 file_action.move_action.paste = true;
                 ui.close_menu();
             }
@@ -360,12 +356,12 @@ fn central_ctx_buttons(ui: &mut Ui, lang_string: &LangString, file_action: &mut 
     } else {
         if ui.button(lang_string.get(LangKey::Paste)).clicked() {
            if file_action.copy_action.show_window {
-               file_action.copy_action.to = path_info.current_absolute_path.clone();
+               file_action.copy_action.to = path_info.get_current_path();
                file_action.copy_action.paste = true;
                ui.close_menu();
            }
             if file_action.move_action.show_window {
-                file_action.move_action.to = path_info.current_absolute_path.clone();
+                file_action.move_action.to = path_info.get_current_path();
                 file_action.move_action.paste = true;
                 ui.close_menu();
             }

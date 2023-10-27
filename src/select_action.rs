@@ -127,4 +127,14 @@ impl SelectAction {
             }
         }
     }
+
+    pub fn check(&mut self) {
+        for file in self.files.clone() {
+            if let Ok(value) = file.try_exists() {
+                if !value {
+                    self.files.remove(&file);
+                }
+            }
+        }
+    }
 }

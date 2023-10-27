@@ -37,15 +37,17 @@ pub struct PathInfo {
     pub filters:                    Filters,
     pub connected_devices:          Vec<PathBuf>,
     pub current_directory_content:  Vec<PathBuf>,
-    pub previous_paths:             Vec<PathBuf>,
+    pub previous_paths:             Vec<String>,
     pub next_paths:                 Vec<PathBuf>,
     pub display_path:               String,
-    pub current_absolute_path:      PathBuf,
+    current_absolute_path:          PathBuf,
     pub sort_type:                  SortByType,
     pub sort_order:                 SortByOrder,
     pub show_dir_content:           bool,
     pub empty_dir:                  bool,
     pub deleted_dir:                bool,
+    pub update_directory:           bool,
+    pub cursor_set:                 bool,
 }
 
 impl PathInfo {
@@ -64,6 +66,8 @@ impl PathInfo {
             show_dir_content:               false,
             empty_dir:                      false,
             deleted_dir:                    false,
+            update_directory:               false,
+            cursor_set:                     true,
         }
     }
 
@@ -161,6 +165,8 @@ impl PathInfo {
         } else {
             self.empty_dir = true;
         }
+
+        self.update_directory = false;
     }
 
     #[cfg(windows)]
@@ -179,5 +185,14 @@ impl PathInfo {
     #[cfg(unix)]
     fn is_hidden(file: &PathBuf) -> Result<bool, u8> {
         Ok(file.starts_with("."))
+    }
+
+    pub fn update_current_path(&mut self, new_path: &PathBuf) {
+        self.current_absolute_path  =   new_path.clone();
+        self.update_directory       =   true;
+        self.cursor_set             =   false;
+    }
+    pub fn get_current_path(&self) -> PathBuf {
+        self.current_absolute_path.clone()
     }
 }

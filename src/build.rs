@@ -1,5 +1,5 @@
 extern crate cc;
 
 fn main() {
-    cc::Build::new().file("src/C_Wrapper_Fn/harddisk.c").compile("harddisk");
+    cc::Build::new().file("src/WinApi(C)/harddisk.c").compile("harddisk");
 }
