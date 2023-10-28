@@ -228,6 +228,7 @@ fn directory_builder(ui: &mut Ui, content: Vec<PathBuf>, file_action: &mut FileA
                             let response = file_widget(ui, file_action.select_action.is_selected(file), filename.to_string_lossy().as_str());
                             response.clone().context_menu(|ui| {
                                 if !file_action.select_action.is_selected(file) {
+                                    file_action.select_action.mode = SelectionMode::SINGLE;
                                     file_action.select_action.manage_selection(file, &content);
                                 }
                                 central_file_ctx_buttons(ui, &lang_string, file_action);
