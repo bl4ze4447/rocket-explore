@@ -66,7 +66,10 @@ pub fn create_win(create_action: &mut CreateAction, radio_state: &mut RadioState
                                     create_action.error_modal.set(caption.to_string(), true);
                                 }
                             } else {
-                                let new_file = new_type.to_string_lossy().to_string() + "." + create_action.extension.clone().as_str();
+                                let mut new_file = new_type.to_string_lossy().to_string();
+                                if !create_action.extension.is_empty() {
+                                    new_file = new_file + "." + create_action.extension.as_str();
+                                }
                                 if let Err(caption) = File::create(new_file) {
                                     create_action.error_modal.set(caption.to_string(), true);
                                 }
@@ -87,35 +90,81 @@ pub fn create_win(create_action: &mut CreateAction, radio_state: &mut RadioState
 pub fn rename_win(rename_action: &mut RenameAction, lang_string: &LangString, ctx: &Context) {
     if rename_action.show_window {
         egui::Window::new(lang_string.get(LangKey::RenameFile)).show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.spacing_mut().item_spacing.y = 10.0;
-                ui.label(lang_string.get(LangKey::OldName) + rename_action.file.file_name().unwrap().to_string_lossy().as_str());
-                ui.spacing_mut().item_spacing.y = 20.0;
-                ui.add(egui::TextEdit::singleline(&mut rename_action.name_after_rename).hint_text(lang_string.get(LangKey::NewName)));
-                ui.spacing_mut().item_spacing.y = 5.0;
+            match rename_action.file_list.clone() {
+                SelectionResult::Single(file) => {
+                    ui.vertical_centered(|ui| {
+                        ui.spacing_mut().item_spacing.y = 10.0;
+                        ui.label(lang_string.get(LangKey::OldName) + file.file_name().unwrap().to_string_lossy().as_str());
+                        ui.spacing_mut().item_spacing.y = 20.0;
+                        ui.add(egui::TextEdit::singleline(&mut rename_action.name_after_rename).hint_text(lang_string.get(LangKey::NewName)));
+                        ui.spacing_mut().item_spacing.y = 5.0;
 
-                ui.separator();
+                        ui.separator();
 
-                ui.horizontal(|ui| {
-                    ui.centered_and_justified(|ui| {
-                        if ui.button(lang_string.get(LangKey::Rename)).clicked() {
+                        ui.horizontal(|ui| {
+                            ui.centered_and_justified(|ui| {
+                                if ui.button(lang_string.get(LangKey::Rename)).clicked() {
 
-                            let mut new_path = rename_action.file.clone();
+                                    let mut new_path = file.clone();
+                                    new_path.pop();
+                                    new_path.push(&rename_action.name_after_rename);
+
+                                    if let Err(caption) = fs::rename(file.clone(), new_path) {
+                                        rename_action.error_modal.set(caption.to_string(), true);
+                                    }
+
+                                    rename_action.clear();
+                                }
+                                if ui.button(lang_string.get(LangKey::Cancel)).clicked() {
+                                    rename_action.clear();
+                                }
+                            })
+                        });
+                    });
+                }
+                SelectionResult::Multiple(files) => {
+                    let mut idx = 1;
+                    let mut perform_rename = false;
+                    ui.vertical_centered(|ui| {
+                        ui.spacing_mut().item_spacing.y = 10.0;
+                        ui.add(egui::TextEdit::singleline(&mut rename_action.name_after_rename).hint_text(lang_string.get(LangKey::NewName)));
+                        ui.spacing_mut().item_spacing.y = 5.0;
+
+                        ui.separator();
+
+                        ui.horizontal(|ui| {
+                            ui.centered_and_justified(|ui| {
+                                perform_rename = ui.button(lang_string.get(LangKey::Rename)).clicked();
+                                if ui.button(lang_string.get(LangKey::Cancel)).clicked() {
+                                    rename_action.clear();
+                                }
+                            })
+                        });
+                    });
+
+                    if perform_rename {
+                        for file in files {
+                            let mut new_path = file.clone();
                             new_path.pop();
-                            new_path.push(&rename_action.name_after_rename);
+                            new_path.push(rename_action.name_after_rename.clone() + " (" + idx.to_string().as_str() + ")");
+                            idx = idx + 1;
 
-                            if let Err(caption) = fs::rename(rename_action.file.clone(), new_path) {
+                            if let Err(caption) = fs::rename(file.clone(), new_path) {
                                 rename_action.error_modal.set(caption.to_string(), true);
                             }
+                        }
+                    }
 
-                            rename_action.clear();
-                        }
-                        if ui.button(lang_string.get(LangKey::Cancel)).clicked() {
-                            rename_action.clear();
-                        }
-                    })
-                });
-            });
+                    if perform_rename {
+                        rename_action.clear();
+                        perform_rename = false;
+                    }
+                }
+                SelectionResult::Err(caption) => {
+                    rename_action.error_modal.set(caption, true);
+                    rename_action.clear();
+                }
+            }
         });
     }
 }
@@ -123,7 +172,7 @@ pub fn rename_win(rename_action: &mut RenameAction, lang_string: &LangString, ct
 pub fn copy_win(copy_action: &mut CopyAction, ctx: &Context) {
     if copy_action.show_window {
         egui::Window::new("Copy").show(ctx, |ui| {
-            match copy_action.from.clone() {
+            match &copy_action.from {
                 SelectionResult::Single(file) => {
                     if let Some(file_name) = file.file_name() {
                         ui.label("Files: ".to_owned() + PathInfo::strip_win_prefix(&file.to_string_lossy()).as_str());
@@ -147,7 +196,7 @@ pub fn copy_win(copy_action: &mut CopyAction, ctx: &Context) {
                     }
                 }
                 SelectionResult::Multiple(files) => {
-                    for file in &files {
+                    for file in files {
                         if let Some(file_name) = file.file_name() {
                             ui.label("Files: ".to_owned() + PathInfo::strip_win_prefix(&file.to_string_lossy()).as_str());
                             if copy_action.paste {
@@ -169,7 +218,7 @@ pub fn copy_win(copy_action: &mut CopyAction, ctx: &Context) {
                     }
                 }
                 SelectionResult::Err(caption) => {
-                    copy_action.error_modal.set(caption, true);
+                    copy_action.error_modal.set(caption.to_string(), true);
                     copy_action.clear();
                 }
             }
@@ -186,7 +235,7 @@ pub fn copy_win(copy_action: &mut CopyAction, ctx: &Context) {
 pub fn move_win(move_action: &mut MoveAction, ctx: &Context) {
     if move_action.show_window {
         egui::Window::new("Move").show(ctx, |ui| {
-            match move_action.from.clone() {
+            match &move_action.from {
                 SelectionResult::Single(file) => {
                     if let Some(file_name) = file.file_name() {
                         ui.label("Files: ".to_owned() + PathInfo::strip_win_prefix(&file.to_string_lossy()).as_str());
@@ -210,7 +259,7 @@ pub fn move_win(move_action: &mut MoveAction, ctx: &Context) {
                     }
                 }
                 SelectionResult::Multiple(files) => {
-                    for file in &files {
+                    for file in files {
                         if let Some(file_name) = file.file_name() {
                             ui.label("From: ".to_owned() + PathInfo::strip_win_prefix(&file.to_string_lossy()).as_str());
                             if move_action.paste {
@@ -245,9 +294,10 @@ pub fn move_win(move_action: &mut MoveAction, ctx: &Context) {
 
                     if move_action.paste {
                         move_action.clear();
-                    }                }
+                    }
+                }
                 SelectionResult::Err(caption) => {
-                    move_action.error_modal.set(caption, true);
+                    move_action.error_modal.set(caption.to_string(), true);
                     move_action.clear();
                 }
             }

@@ -32,6 +32,11 @@ pub enum LangKey {
     OldName,
     FreeOf,
     PowerShellIssue,
+    SearchingIn,
+    SearchingAll,
+    SearchFinished,
+    CheckSpelling,
+    CheckOr,
 }
 
 pub struct LangString {
@@ -62,7 +67,7 @@ impl LangString {
                     LangKey::CreateNew         =>      String::from("Create new"),
                     LangKey::PasteFrom         =>      String::from("Paste from"),
                     LangKey::Paste             =>      String::from("Paste"),
-                    LangKey::CantCopyRoot      =>      String::from("Cannot copy root; if this is a bug please report it"),
+                    LangKey::CantCopyRoot      =>      String::from("Cannot copy root; if this is a bug please report it."),
                     LangKey::File              =>      String::from("File"),
                     LangKey::Folder            =>      String::from("Folder"),
                     LangKey::Create            =>      String::from("Create"),
@@ -75,7 +80,12 @@ impl LangString {
                     LangKey::ExtensionOptional =>      String::from("Extension (optional): "),
                     LangKey::OldName           =>      String::from("Old name: "),
                     LangKey::FreeOf            =>      String::from(" free of "),
-                    LangKey::PowerShellIssue   =>      String::from("Could not open file. Path may not exist or PowerShell might not be installed"),
+                    LangKey::PowerShellIssue   =>      String::from("Could not open file. Path may not exist or PowerShell might not be installed/"),
+                    LangKey::SearchingIn       =>      String::from("Performing search in "),
+                    LangKey::SearchingAll      =>      String::from("Perfoming search in all drives."),
+                    LangKey::SearchFinished    =>      String::from("Search finished."),
+                    LangKey::CheckSpelling     =>      String::from("No files were found, check your spelling and try again"),
+                    LangKey::CheckOr           =>      String::from("or search everywhere"),
                 }
             }
             Language::Romanian => {
@@ -110,6 +120,11 @@ impl LangString {
                     LangKey::FreeOf            =>      String::from(" liber din "),
                     LangKey::PowerShellIssue   =>      String::from("Fisierul nu a putut fi deschis. Calea folder-ului este posibil sa nu mai existe sau\
                                                                 PowerShell nu este instalat."),
+                    LangKey::SearchingIn       =>      String::from("Cautam in "),
+                    LangKey::SearchingAll      =>      String::from("Cautam in toate dispozitivele."),
+                    LangKey::SearchFinished    =>      String::from("Cautare completata."),
+                    LangKey::CheckSpelling     =>      String::from("Cautarea nu a gasit niciun fisier, verificati numele fisierului introdus"),
+                    LangKey::CheckOr           =>      String::from("sau cautati in toate dispozitivele"),
                 }
             }
         }
