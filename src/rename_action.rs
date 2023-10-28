@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 use crate::error_modal::ErrorModal;
+use crate::select_action::SelectionResult;
 
 pub struct RenameAction {
-    pub file:                   PathBuf,
+    pub file_list:                   SelectionResult,
     pub show_window:            bool,
     pub name_after_rename:      String,
     pub error_modal:            ErrorModal,
@@ -10,7 +11,7 @@ pub struct RenameAction {
 impl RenameAction {
     pub fn new() -> Self {
         Self {
-            file:                   PathBuf::new(),
+            file_list:                   SelectionResult::Single(PathBuf::new()),
             show_window:            false,
             name_after_rename:      String::new(),
             error_modal:            ErrorModal::new(String::from("Rename Error")),

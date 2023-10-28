@@ -10,7 +10,7 @@ pub enum SelectionMode {
 }
 pub enum SelectionResult {
     Single(PathBuf),
-    Multiple(Vec<PathBuf>),
+    Multiple(HashSet<PathBuf>),
     Err(String)
 }
 impl SelectionResult {
@@ -106,9 +106,9 @@ impl SelectAction {
         self.files.clear();
         self.mode = SelectionMode::SINGLE;
     }
-    pub fn get_selection(&self) -> SelectionResult {
+    pub fn get_selection(&self) -> SelectionResult { // pass LangString
         if self.files.is_empty() {
-            return SelectionResult::Err("No file is selected".to_owned()) // TODO
+            return SelectionResult::Err("No file is selected".to_owned())
         }
 
         return match self.mode {
@@ -116,14 +116,24 @@ impl SelectAction {
                 if let Some(f) = self.files.clone().into_iter().next() {
                     SelectionResult::Single(f)
                 } else {
-                    SelectionResult::Err("TODO".to_owned())
+                    SelectionResult::Err("get_selection();SelectionMode::SINGLE;next()=None/Err;".to_owned())
                 }
             }
             SelectionMode::MULTIPLE => {
-                SelectionResult::Multiple(self.files.clone().into_iter().collect())
+                SelectionResult::Multiple(self.files.clone())
             }
             SelectionMode::RANGED => {
-                SelectionResult::Multiple(self.files.clone().into_iter().collect())
+                SelectionResult::Multiple(self.files.clone())
+            }
+        }
+    }
+
+    pub fn check(&mut self) {
+        for file in self.files.clone() {
+            if let Ok(exist) = file.try_exists() {
+                if !exist {
+                    self.files.remove(&file);
+                }
             }
         }
     }
