@@ -9,7 +9,7 @@ pub fn harddisk_widget(ui: &mut Ui, selected: bool, text: &str, size_free: &str,
     if ui.is_rect_visible(rect) {
         let visuals = ui.style().interact(&response);
         let rect = rect.expand(visuals.expansion);
-        let rounding = 0.15 * rect.height();
+        let rounding = 0.08 * rect.height();
         ui.painter().rect(rect, rounding, if selected {
             Color32::from_rgb(100,149,237)
         } else {
