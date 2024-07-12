@@ -1,3 +1,5 @@
+https://discord.gg/b2es8dnz
+
 this needs to be re-written in a diferent gui framework, maybe tauri.
 e-gui has some issues which made me not able to progress further.
 
