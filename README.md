@@ -14,6 +14,8 @@ my expectations of this proejct:
 - offline and no account, there is no need to gather user info
 - cross-compatible
 
+the app needs a lot of work to be functional, it is not perfect but maybe with the help of someone else I can make this better.
+
 i wanted to become familiar with rust while learning so this might just be a pile of crap for an experienced developer, either way I will keep working on it.
 if you want to help, the biggest thing i need help with is moving it to a different framework :)  
 
