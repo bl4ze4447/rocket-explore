@@ -1,4 +1,4 @@
-![Example](https://imgur.com/KqB1SsL)
+![Example](https://i.imgur.com/KqB1SsL.png)
 
 https://discord.gg/b2es8dnz
 
